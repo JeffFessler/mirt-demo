@@ -11,8 +11,9 @@ in a browser
 without installing any local software
 by using the free service at
 https://mybinder.org/
+by clicking on the binder badges below:
 
-* Basic instruction:
+* Basic introduction:
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=isbi-19%2F00-intro.ipynb)
 
 * MRI compressed sensing reconstruction demo:
