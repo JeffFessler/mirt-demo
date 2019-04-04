@@ -12,9 +12,14 @@ without installing any local software
 by using the free service at
 https://mybinder.org/
 
-For example,
-to see a basic notebook
-todo
+* Basic instruction:
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=isbi-19%2F00-intro.ipynb)
+
+* MRI compressed sensing reconstruction demo:
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=isbi-19%2F01-recon.ipynb)
+
+You can also view the notebook code directly:
+* [demo/](https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/)
 
 This software was developed at the University of Michigan 
 by 
