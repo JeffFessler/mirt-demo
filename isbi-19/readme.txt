@@ -6,7 +6,7 @@ for the image recon portion of the ISBI 2019 tutorial:
 
 One can view the notebooks directly using at github using:
 https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/00-intro.ipynb
-https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/01-odwt.ipynb
+https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/01-recon.ipynb
 
 Or one can use the nbviewer web service:
 https://nbviewer.jupyter.org
