@@ -22,6 +22,9 @@ by clicking on the binder badges below:
 You can also view the notebook code directly:
 * [demo/](https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/)
 
+Here is an example of the kind of image produced by one of the demos
+![phantom-image](/figure/isbi-19-recon1.png?raw=true "phantom image")
+
 This software was developed at the University of Michigan 
 by 
 [Jeff Fessler](http://web.eecs.umich.edu/~fessler)
