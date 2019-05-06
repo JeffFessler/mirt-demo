@@ -1,4 +1,4 @@
-# mirt-demo
+# mirt-demo at https://github.com/JeffFessler/mirt-demo
 
 Collection of
 Jupyter notebooks that demonstrate the image reconstruction capabilities
