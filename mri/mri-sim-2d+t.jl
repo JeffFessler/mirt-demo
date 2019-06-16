@@ -104,6 +104,7 @@ end
 
 """
 `make_Dt(N3i::Dims; T::DataType=Float32)`
+temporal finite difference object
 """
 function make_Dt(N3i::Dims; T::DataType=Float32)
 	diff3_adj = y -> cat(dims=3,
@@ -150,16 +151,27 @@ if false
 end
 
 # prepare to run nonlinear CG
-if false
+if !@isdefined(xh)
 	niter = 50
-	fun = (x,iter) -> 0
-#	T = LinearMap(x -> todo
-	delta = 0.1 # small relative to temporal differences
-	dpot = z -> z / (1 + abs(z/delta))
-	gradf = (v -> v - y, u -> reg * dpot.(u))
-	curvf = (v -> v - y, u -> reg)
-	B = [A,T]
-	(xh, out) = ncg(B, gradf, curvf, x0; niter=niter, fun=fun)
+	fun = (x,iter) -> 0 # todo cost
+	delta = Float32(0.1) # small relative to temporal differences
+	reg = Float32(2^20) # trial and error here
+	dpot = z -> z / (Float32(1) + abs(z/delta))
+	gradf = [v -> v - y, u -> reg * dpot.(u)]
+	curvf = [v -> Float32(1), u -> reg]
+	B = [A,Dt]
+	(xh, out) = ncg(B, gradf, curvf, x0[:]; niter=niter, fun=fun)
+	xh = reshape(xh, N3i)
+end
+
+# show results
+if true
+	plot(layout=(3,1),
+	jim(xtrue, yflip=ig.dy < 0),
+	jim(xh, yflip=ig.dy < 0),
+	jim(xh-xtrue, yflip=ig.dy < 0),
+	)
+	gui()
 end
 
 
