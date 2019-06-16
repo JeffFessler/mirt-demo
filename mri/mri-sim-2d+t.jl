@@ -76,17 +76,16 @@ end
 
 # simulate k-space data via an inverse crime
 if !@isdefined(y)
-end
 	ytrue = A * xtrue[:]
 
-	snr2sigma = (db, yb) -> 
-		exp(-db/20) * norm(yb) / sqrt(length(yb)) # / sqrt(2) # for complex noise
+	snr2sigma = (db, yb) -> # compute noise sigma from SNR (no sqrt(2) needed)
+		10^(-db/20) * norm(yb) / sqrt(length(yb))
 
-	sig = snr2sigma(80, ytrue)
+	sig = snr2sigma(50, ytrue)
 	seed!(0)
 	y = ytrue + sig * randn(ComplexF32, size(ytrue))
-	y = ytrue + sig * randn(Float32, size(ytrue))
-	@show 20*log10(norm(ytrue) / norm(y - ytrue))
+	@show 20*log10(norm(ytrue) / norm(y - ytrue)) # verify SNR
+end
 
 
 if false
