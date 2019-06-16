@@ -6,6 +6,7 @@ using MIRT
 using Plots: gui, plot, scatter
 using LinearAlgebra: norm, Diagonal
 using Random: seed!
+using LinearMaps
 
 # generate dynamic image sequence
 if !@isdefined(xtrue)
@@ -81,20 +82,67 @@ if !@isdefined(y)
 	snr2sigma = (db, yb) -> # compute noise sigma from SNR (no sqrt(2) needed)
 		10^(-db/20) * norm(yb) / sqrt(length(yb))
 
-	sig = snr2sigma(50, ytrue)
+	sig = Float32(snr2sigma(50, ytrue))
 	seed!(0)
 	y = ytrue + sig * randn(ComplexF32, size(ytrue))
 	@show 20*log10(norm(ytrue) / norm(y - ytrue)) # verify SNR
 end
 
 
-if false
+# initial image via zero-fill and scaling
+if !@isdefined(x0)
 	# todo: need density compensation, perhaps via
 	# https://github.com/JuliaGeometry/VoronoiDelaunay.jl
-	tmp = reshape(A' * y, N..., nt) # zero-filled recon
-	jim(tmp)
+	x0 = reshape(A' * y, N..., nt) # zero-filled recon
+
+	tmp = A * x0[:]
+	x0 = (tmp'y / norm(tmp)^2) * x0 # scale sensibly
+	jim(x0, yflip=ig.dy < 0)
 	gui()
 end
+
+
+# temporal finite differences
+if !@isdefined(Dt)
+	diff3_adj = y -> cat(dims=3,
+		-(@views y[:,:,1]),
+		(@views y[:,:,1:(end-1)] - y[:,:,2:end]),
+		(@views y[:,:,end]))
+
+#	tmp = diff(xtrue, dims=3)
+#	@show size(tmp)
+#	tmp = diff3_adj(tmp)
+#	@show size(tmp)
+
+	N3i = (N..., nt) # (nx ny nt)
+	N3o = (N..., nt-1) # (nx ny nt-1)
+	Dt = LinearMap{eltype(A)}(
+			x -> diff(reshape(x, N3i), dims=3)[:],
+			y -> diff(reshape(y, N3o), dims=3)[:],
+			prod(N3o), prod(N3i))
+
+	tmp = reshape(Dt * xtrue[:], N3o)
+#	jim(tmp), gui()
+	tmp = reshape(Dt' * tmp[:], N3i)
+	jim(tmp), gui()
+end
+
+if false
+end
+
+# prepare to run nonlinear CG
+if false
+	niter = 50
+	fun = (x,iter) -> 0
+#	T = LinearMap(x -> todo
+	delta = 0.1 # small relative to temporal differences
+	dpot = z -> z / (1 + abs(z/delta))
+	gradf = (v -> v - y, u -> reg * dpot.(u))
+	curvf = (v -> v - y, u -> reg)
+	B = [A,T]
+	(xh, out) = ncg(B, gradf, curvf, x0; niter=niter, fun=fun)
+end
+
 
 if false
 
