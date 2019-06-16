@@ -102,25 +102,44 @@ if !@isdefined(x0)
 end
 
 
-# temporal finite differences
-if !@isdefined(Dt)
+"""
+`make_Dt(N3i::Dims; T::DataType=Float32)`
+"""
+function make_Dt(N3i::Dims; T::DataType=Float32)
 	diff3_adj = y -> cat(dims=3,
 		-(@views y[:,:,1]),
 		(@views y[:,:,1:(end-1)] - y[:,:,2:end]),
 		(@views y[:,:,end]))
 
-#	tmp = diff(xtrue, dims=3)
-#	@show size(tmp)
-#	tmp = diff3_adj(tmp)
-#	@show size(tmp)
-
-	N3i = (N..., nt) # (nx ny nt)
-	N3o = (N..., nt-1) # (nx ny nt-1)
-	Dt = LinearMap{eltype(A)}(
+	N3o = N3i .- (0,0,1) # (nx ny nt-1)
+	return LinearMap{T}(
 			x -> diff(reshape(x, N3i), dims=3)[:],
-			y -> diff(reshape(y, N3o), dims=3)[:],
+			y -> diff3_adj(reshape(y, N3o))[:],
 			prod(N3o), prod(N3i))
+end
 
+if false # test
+function make_Dt(test::Symbol)
+	D = make_Dt((3,4,5))
+#	tmp = Matrix(D)
+#	jim(tmp'), gui()
+#	tmp = Matrix(D')
+#	jim(tmp'), gui()
+#	@show maximum(abs.(Matrix(D)))
+#	@show maximum(abs.(Matrix(D')))
+#	@show maximum(abs.(Matrix(D)' - Matrix(D')))
+
+#	@test Matrix(D)' == Matrix(D')
+	true
+end
+end
+
+
+# temporal finite differences
+if !@isdefined(Dt)
+	N3i = (N..., nt) # (nx ny nt)
+    N3o = (N..., nt-1) # (nx ny nt-1)
+    Dt = make_Dt(N3i, T=eltype(A))
 	tmp = reshape(Dt * xtrue[:], N3o)
 #	jim(tmp), gui()
 	tmp = reshape(Dt' * tmp[:], N3i)
