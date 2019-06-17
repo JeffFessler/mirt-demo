@@ -152,24 +152,29 @@ end
 
 # prepare to run nonlinear CG
 if !@isdefined(xh)
-	niter = 50
-	fun = (x,iter) -> 0 # todo cost
+	niter = 90
 	delta = Float32(0.1) # small relative to temporal differences
 	reg = Float32(2^20) # trial and error here
+	ffair = (t,d) -> d^2 * (abs(t)/d - log(1 + abs(t)/d))
+	pot = z -> ffair(z, delta)
 	dpot = z -> z / (Float32(1) + abs(z/delta))
+	cost = x -> 0.5 * norm(A*x - y)^2 + reg * sum(pot.(Dt * x))
+	fun = (x,iter) -> cost(x)
 	gradf = [v -> v - y, u -> reg * dpot.(u)]
 	curvf = [v -> Float32(1), u -> reg]
 	B = [A,Dt]
 	(xh, out) = ncg(B, gradf, curvf, x0[:]; niter=niter, fun=fun)
 	xh = reshape(xh, N3i)
+	costs = [out[i+1][1] for i=0:niter]
 end
 
 # show results
 if true
-	plot(layout=(3,1),
-	jim(xtrue, yflip=ig.dy < 0),
-	jim(xh, yflip=ig.dy < 0),
-	jim(xh-xtrue, yflip=ig.dy < 0),
+	plot(layout=(2,2),
+		jim(xtrue, "xtrue", yflip=ig.dy < 0),
+		jim(xh, "recon", yflip=ig.dy < 0),
+		jim(xh-xtrue, "error", yflip=ig.dy < 0),
+		scatter(0:niter, log.(costs), label="cost", xlabel="iteration"),
 	)
 	gui()
 end
