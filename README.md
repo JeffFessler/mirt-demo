@@ -19,6 +19,9 @@ by clicking on the binder badges below:
 * MRI compressed sensing reconstruction demo:
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=isbi-19%2F01-recon.ipynb)
 
+* Dynamic MRI with golden-angle radial sampling reconstruction demo:
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=mri%2Fmri-sim-2d+t.ipynb)
+
 You can also view the notebook code directly:
 * [demo/](https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/)
 
