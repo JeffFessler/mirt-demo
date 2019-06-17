@@ -20,7 +20,7 @@ by clicking on the binder badges below:
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=isbi-19%2F01-recon.ipynb)
 
 * Dynamic MRI with golden-angle radial sampling reconstruction demo:
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=mri%2Fmri-sim-2d+t.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=mri%2Fmri-sim-2d%2Bt.ipynb)
 
 You can also view the notebook code directly:
 * [demo/](https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/)
