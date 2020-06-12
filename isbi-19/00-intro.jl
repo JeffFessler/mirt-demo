@@ -7,9 +7,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.0.5
 #   kernelspec:
-#     display_name: Julia 1.1.0
+#     display_name: Julia 1.4.2
 #     language: julia
-#     name: julia-1.1
+#     name: julia-1.4
 # ---
 
 # ### MRI reconstruction introductory notebook for ISBI 2019 tutorial
@@ -31,8 +31,8 @@
 # It might take a little bit of time to run the first time you try it because Julia is essentially a compiled language under the hood, even though it feels like an interactive language to the user, so it will be compiling things behind the scenes.
 
 # load all packages needed for this demo 
-using MIRT # https://github.com/JeffFessler/MIRT.jl
-using FFTW
+using MIRT: ellipse_im, jim # https://github.com/JeffFessler/MIRT.jl
+using FFTW: fft
 
 # ### View the Shepp-Logan image and its spectrum
 # The `ellipse_im` function in MIRT can generate phantom images consisting of ellipses such as the Shepp-Logan image.
@@ -43,11 +43,11 @@ image = ellipse_im(256, oversample=2)
 jim(image, "Shepp-Logan Phantom")
 
 # calculate k-space data using fft
-kspace = fft(image) # this is a 2D FFT because image is a 2D array
+kspace = fft(image) # this is a 2D FFT because "image" is a 2D array
 jim(kspace, fft0=true) # show k-space with 0 at center, ala matlab's "fftshift"
 
-# it's hard to see much on a linear scale, so let's use a log scale
-logger = (x;min=-6) -> log10.(max.(abs.(x) / maximum(abs.(x)), (10.)^min))
+# It is hard to see much on a linear scale, so now use a log scale
+logger = (x ; min=-6) -> log10.(max.(abs.(x) / maximum(abs.(x)), (10.)^min))
 jim(logger(kspace), "k-space data on log scale", fft0=true)
 
 # ### Getting help
@@ -62,7 +62,7 @@ jim(logger(kspace), "k-space data on log scale", fft0=true)
 # with different argument combinations,
 # and with optimal keyword arguments.
 
-?jim
+#?jim # uncomment this line to see
 
 # ### End of introduction!
 #
