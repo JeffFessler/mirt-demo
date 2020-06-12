@@ -24,8 +24,8 @@
 # load all packages needed for this demo 
 using MIRT # https://github.com/JeffFessler/MIRT.jl
 using LinearAlgebra
-using Plots; default(markerstrokecolor=nothing)
-using LinearMaps
+using Plots; default(markerstrokecolor=:auto)
+using LinearMapsAA
 using FFTW
 using Random: seed!
 #include(ENV["HOME"] * "/l/g/teach/w19-598-opt/hw/auto/test/lipcheck.jl")
@@ -38,6 +38,7 @@ Xtrue = ellipse_im(ny, oversample=2)[Int((ny-nx)/2+1):Int(ny-(ny-nx)/2),:]
 #Xtrue = ellipse_im(192, ny=256, oversample=2) # too small
 nx,ny = size(Xtrue)
 jim(Xtrue, "true image")
+prompt()
 
 # +
 #savefig("xtrue.pdf")
@@ -69,16 +70,19 @@ plot(p1,p2)
 # The system matrix is a `LinearMap` object, akin to a `fatrix` in Matlab MIRT.
 
 # system model
-F = LinearMap{Complex{Float32}}(
+F = LinearMapAA(
     x -> fft(reshape(x,M,N))[samp],
-    y -> (M*N)*ifft(embed(y,samp))[:],
-    sum(samp), M*N);
+    y -> (M*N)*vec(ifft(embed(y,samp))),
+    (sum(samp), M*N),
+	T = Complex{Float32},
+);
 
 # initial image based on zero-filled reconstruction
 nrmse = (x) -> norm(x[:] - Xtrue[:]) / norm(Xtrue[:])
 X0 = reshape(1/(M*N) * (F' * y), M, N)
 @show nrmse(X0)
 jim(X0, "|X0|: initial image")
+prompt()
 
 # ### Case 1: Edge-preserving regularization
 #
@@ -94,7 +98,7 @@ jim(X0, "|X0|: initial image")
 A = F
 delta = 0.1
 reg = 0.01 * M * N
-T = diff_map(M,N) # finite differences sparsifying transform for anisotropic TV
+T = diff_map((M,N)) # finite differences sparsifying transform for anisotropic TV
 pot = (z,del) -> del^2 * (abs(z)/del - log(1 + abs(z)/del)) # Fair potential function
 cost = (x) -> 1/2 * norm(A * x - y)^2 + reg * sum(pot.(T*x, delta))
 dpot = (z,del) -> z / (1 + abs(z)/del) # potential derivative
@@ -108,6 +112,7 @@ Xcg = reshape(xcg, M, N)
 @show nrmse(Xcg)
 
 jim(Xcg, "CG: edge-preserving regularization")
+prompt()
 
 # +
 #savefig("xcg.pdf")
@@ -120,6 +125,7 @@ Xogm = reshape(xogm, M, N)
 @show nrmse(Xogm)
 
 jim(Xogm, "OGM recon with edge-preserving regularization")
+prompt()
 
 p1 = jim(Xtrue, "true")
 p2 = jim(X0, "X0: initial")
@@ -129,6 +135,7 @@ p6 = jim(Xcg - Xtrue, "Xcg error")
 plot(p1, p2, p3, p1, p5, p6)
 #plot(p1, p2, p3, layout=(1,3))
 #plot(p5, p6)
+prompt()
 
 # POGM - suboptimal in smooth case
 if false
@@ -152,6 +159,7 @@ cost_min = min(minimum(cost_cg), minimum(cost_ogm))
 plot(xlabel="iteration k", ylabel="Relative Cost")
 scatter!(0:niter, cost_ogm .- cost_min, markershape=:utriangle, label="Cost OGM")
 scatter!(0:niter, cost_cg  .- cost_min, label="Cost CG")
+prompt()
 
 # +
 #savefig("cost_ogm_cg.pdf")
@@ -165,6 +173,7 @@ plot(xlabel="iteration k", ylabel="NRMSE")
 scatter!(0:niter, nrmse_ogm, markershape=:utriangle, label="NRMSE OGM")
 scatter!(0:niter, nrmse_cg, label="NRMSE CG")
 #scatter!(0:niter, nrmse_pogm, label="NRMSE POGM")
+prompt()
 
 # +
 #savefig("nrmse_ogm_cg.pdf")
@@ -194,6 +203,7 @@ scatter!(0:niter, nrmse_cg, label="NRMSE CG")
 
 W, scales, mfun = Aodwt((M,N)) # Orthogonal discrete wavelet transform (LinearMap)
 jim(mfun(W,Xtrue) .* (scales .> 0), "wavelet detail coefficients")
+prompt()
 
 # Cost function for edge-preserving regularization
 Az = F * W'
@@ -242,6 +252,7 @@ Xpogm = reshape(W'*z_pogm, M, N)
 
 jim(Xfista, "FISTA/FPGM")
 jim(Xpogm, "POGM with ODWT")
+prompt()
 
 # +
 #savefig("xpogm_odwt.pdf")
@@ -256,6 +267,7 @@ plot(xlabel="iteration k", ylabel="Relative cost")
 scatter!(0:niter, cost_ista  .- cost_min, label="Cost ISTA")
 scatter!(0:niter, cost_fista .- cost_min, markershape=:square, label="Cost FISTA")
 scatter!(0:niter, cost_pogm  .- cost_min, markershape=:utriangle, label="Cost POGM")
+prompt()
 
 # +
 #savefig("cost_pogm_odwt.pdf")
@@ -269,6 +281,7 @@ plot(xlabel="iteration k", ylabel="NRMSE", ylim=[0.01,0.08])
 scatter!(0:niter, nrmse_ista, label="NRMSE ISTA")
 scatter!(0:niter, nrmse_fista, markershape=:square, label="NRMSE FISTA")
 scatter!(0:niter, nrmse_pogm, markershape=:utriangle, label="NRMSE POGM")
+prompt()
 
 # +
 #savefig("nrmse_pogm_odwt.pdf")
@@ -282,3 +295,4 @@ p6 = jim(Xpogm - Xtrue, "Xpogm error")
 plot(p1, p2, p3, p1, p5, p6)
 #plot(p1, p2, p3, layout=(1,3))
 #plot(p5, p6)
+prompt()
