@@ -1,14 +1,34 @@
-# 2D+T dynamic MRI simulation using GA radial sampling
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .jl
+#       format_name: light
+#       format_version: '1.3'
+#       jupytext_version: 1.0.5
+#   kernelspec:
+#     display_name: Julia 1.4.2
+#     language: julia
+#     name: julia-1.4
+# ---
+
+# ### 2D+T dynamic MRI simulation
+# using GA radial sampling
 # reconstructed with temporal "TV" regularizer (corner-rounded)  
 # 2019-06-13, Jeff Fessler  
-# 2019-06-23 update to use more realistic simulated sensitivity maps
+# 2019-06-23 update to use more realistic simulated sensitivity maps  
+# 2020-06-20 update
 
-using MIRT
-using Plots: gui, plot, scatter
+using MIRT: jim, prompt
+using MIRT: image_geom, ellipse_im_params, ellipse_im
+using MIRT: nufft_init, diff_map, ncg
+using MIRT: ir_mri_sensemap_sim, ir_mri_kspace_ga_radial
+using Plots: gui, plot, scatter, default; default(markerstrokecolor=:auto)
 using LinearAlgebra: norm, Diagonal
+using LinearMapsAA
 using Random: seed!
-using LinearMaps
 jim(:abswarn, false); # suppress warnings about display of |complex| images
+
 
 # generate dynamic image sequence
 if !@isdefined(xtrue)
@@ -17,7 +37,7 @@ if !@isdefined(xtrue)
 	nt = 8 # frames
 	ig = image_geom(nx=N[1], ny=N[2], fov=fov)
 
-	_,ellpar = ellipse_im(ig, :southpark, return_params=true)
+	ellpar = ellipse_im_params(ig, :southpark)
 	ellpars = Array{Float32}(undef, size(ellpar)..., nt)
 	xtrue = Array{ComplexF32}(undef, N..., nt)
 	for it=1:nt
@@ -30,10 +50,15 @@ if !@isdefined(xtrue)
 	end
 end
 jim(xtrue, yflip=ig.dy < 0)
+#prompt()
+
 
 # plot one time course to see temporal change
 ix,iy = 30,14
-plot(1:nt, abs.(xtrue[ix,iy,:]), label="ix=$ix, iy=$iy", xlabel="frame")
+plot(1:nt, abs.(xtrue[ix,iy,:]), label="ix=$ix, iy=$iy",
+	marker=:o, xlabel="frame")
+#prompt()
+
 
 # +
 # k-space sampling and data
@@ -46,24 +71,46 @@ if !@isdefined(kspace)
 	kspace[:,:,1] ./= ig.fovs[1]
 	kspace[:,:,2] ./= ig.fovs[2]
 	kspace = reshape(kspace, Nro, nspf, nt, 2)
-end
 
-if true # plot sampling
-	ps = Array{Any}(undef, nt)
-	for it=1:nt
-		ps[it] = scatter(kspace[:,:,it,1], kspace[:,:,it,2], aspect_ratio=1, label="")
-		plot(ps[it])
-		gui()
+	if true # plot sampling
+		ps = Array{Any}(undef, nt)
+		for it=1:nt
+			ps[it] = scatter(kspace[:,:,it,1], kspace[:,:,it,2], aspect_ratio=1, label="")
+			plot(ps[it])
+			gui()
+		end
+		plot(ps..., layout=(2,4))
 	end
-	plot(ps..., layout=(2,4))
+#	prompt()
 end
 # -
 
-# make sensitivity maps
-ncoil = 2
-(smap,_) = ir_mri_sensemap_sim(dims=N, ncoil=ncoil, orbit_start=90)
-jim(smap, "ncoil=$ncoil sensitivity maps")
 
+#+
+# make sensitivity maps, normalized so SSoS = 1
+if !@isdefined(smap)
+	ncoil = 2
+	(smap,_) = ir_mri_sensemap_sim(dims=N, ncoil=ncoil, orbit_start=90)
+	p1 = jim(smap, "ncoil=$ncoil sensitivity maps raw")
+
+	ssos = sqrt.(sum(abs.(smap).^2, dims=ndims(smap))) # SSoS
+	ssos = selectdim(ssos, ndims(smap), 1)
+	p2 = jim(ssos, "SSoS")
+
+	for ic=1:ncoil
+		selectdim(smap, ndims(smap), ic) ./= ssos
+	end
+	p3 = jim(smap, "ncoil=$ncoil sensitivity maps")
+
+	ssos = sqrt.(sum(abs.(smap).^2, dims=ndims(smap))) # SSoS
+	@assert all(isapprox.(ssos,1))
+	plot(p1, p2, p3)
+#	prompt()
+end
+#-
+
+
+#+
 # make system matrix for dynamic non-Cartesian parallel MRI
 if !@isdefined(A)
 	# a NUFFT object for each frame
@@ -74,20 +121,17 @@ if !@isdefined(A)
 	end
 
 	# block diagonal system matrix, with one NUFFT per frame
-	# todo: more realistic coil sensitivity
-	ncoil = size(smap,3)
-#	S = [Diagonal(ic*ones(Float32, N)[:]) for ic=1:ncoil] # silly sensitivity maps
-	S = [Diagonal(ic*ones(Float32, N)[:]) for ic=1:ncoil] # simulated sensitivity maps
-	Slm = block_lm(S, how=:col) # [S1; ... ; Sncoil]
-	mykron = A1 -> block_lm([A1], how=:kron, Mkron=ncoil) # one NUFFT per coil
+	S = [Diagonal(selectdim(smap, ndims(smap), ic)[:]) for ic=1:ncoil]
+	AS1 = A1 -> vcat([A1 * LinearMapAA(s) for s in S]...) # [A1*S1; ... ; A1*Sncoil]
 
 	# output is essentially [nt Ncoil nspf Nro] (which is possibly unusual)
 	# input is [N... nt]
-	A = block_lm([mykron(s.A)*Slm for s in ns], how=:diag);
+	A = block_diag([AS1(s.A) for s in ns]...)
 end
-size(A)
+#-
 
 
+#+
 # simulate k-space data via an inverse crime
 if !@isdefined(y)
 	ytrue = A * xtrue[:]
@@ -100,6 +144,7 @@ if !@isdefined(y)
 	y = ytrue + sig * randn(ComplexF32, size(ytrue))
 	@show 20*log10(norm(ytrue) / norm(y - ytrue)) # verify SNR
 end
+#-
 
 
 # initial image via zero-fill and scaling
@@ -110,56 +155,27 @@ if !@isdefined(x0)
 
 	tmp = A * x0[:]
 	x0 = (tmp'y / norm(tmp)^2) * x0 # scale sensibly
+	jim(x0, "initial image", yflip=ig.dy < 0)
 end
-jim(x0, "initial image", yflip=ig.dy < 0)
+#prompt()
 
 
-"""
-`make_Dt(N3i::Dims; T::DataType=Float32)`
-temporal finite difference object
-"""
-function make_Dt(N3i::Dims; T::DataType=Float32)
-	diff3_adj = y -> cat(dims=3,
-		-(@views y[:,:,1]),
-		(@views y[:,:,1:(end-1)] - y[:,:,2:end]),
-		(@views y[:,:,end]))
-
-	N3o = N3i .- (0,0,1) # (nx ny nt-1)
-	return LinearMap{T}(
-			x -> diff(reshape(x, N3i), dims=3)[:],
-			y -> diff3_adj(reshape(y, N3o))[:],
-			prod(N3o), prod(N3i))
-end
-
-if false # test
-function make_Dt(test::Symbol)
-	D = make_Dt((3,4,5))
-#	tmp = Matrix(D)
-#	jim(tmp'), gui()
-#	tmp = Matrix(D')
-#	jim(tmp'), gui()
-#	@show maximum(abs.(Matrix(D)))
-#	@show maximum(abs.(Matrix(D')))
-#	@show maximum(abs.(Matrix(D)' - Matrix(D')))
-
-#	@test Matrix(D)' == Matrix(D')
-	true
-end
-end
-
-
+# +
 # temporal finite differences
 if !@isdefined(Dt)
 	N3i = (N..., nt) # (nx ny nt)
 	N3o = (N..., nt-1) # (nx ny nt-1)
-	Dt = make_Dt(N3i, T=eltype(A))
-end
+	Dt = diff_map(N3i, dims=length(N)+1) # T=eltype(A)) # todo
 
 	tmp = reshape(Dt * xtrue[:], N3o)
-#	jim(tmp), gui()
 	tmp = reshape(Dt' * tmp[:], N3i)
-	jim(tmp)
+	jim(tmp, "time diff", yflip=ig.dy < 0)
+end
+#prompt()
+# -
 
+
+# +
 # run nonlinear CG
 if !@isdefined(xh)
 	niter = 90
@@ -185,30 +201,3 @@ end
 		jim(xh-xtrue, "error", yflip=ig.dy < 0),
 		scatter(0:niter, log.(costs), label="cost", xlabel="iteration"),
 	)
-
-
-
-#=
-
-"""
-`stackpick(x::AbstractArray{<:Any}, i::Int)`
-return `x[:,...,:,i]`
-"""
-function stackpick(x::AbstractArray{<:Any}, i::Int)
-	xdim = size(x)
-	dim1 = xdim[1:end-1]
-	return reshape((@view reshape(x, prod(dim1), xdim[end])[:,i]), dim1)
-end
-
-	forw = x -> begin
-			out = Array{Any}(undef, nt)
-			for it=1:nt
-				out[it] = ns[it].nufft(stackpick(x,it))
-			end
-			return vcat(out...)
-		end
-	tmp = forw(xtrue)
-	@show size(tmp)
-end
-
-=#
