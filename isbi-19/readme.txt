@@ -13,4 +13,6 @@ https://nbviewer.jupyter.org
 
 Or use the binder badges in the readme
 
+Or run the `.jl` code files directly from Julia's REPL.
+
 Jeff Fessler, University of Michigan

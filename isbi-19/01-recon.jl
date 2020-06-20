@@ -7,9 +7,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.0.5
 #   kernelspec:
-#     display_name: Julia 1.1.0
+#     display_name: Julia 1.4.2
 #     language: julia
-#     name: julia-1.1
+#     name: julia-1.4
 # ---
 
 # ### MRI reconstruction demo
@@ -28,7 +28,7 @@ using Plots; default(markerstrokecolor=:auto)
 using LinearMapsAA
 using FFTW
 using Random: seed!
-#include(ENV["HOME"] * "/l/g/teach/w19-598-opt/hw/auto/test/lipcheck.jl")
+#include(ENV["hw598test"] * "lipcheck.jl")
 
 # ### Create (synthetic) data
 
@@ -38,7 +38,7 @@ Xtrue = ellipse_im(ny, oversample=2)[Int((ny-nx)/2+1):Int(ny-(ny-nx)/2),:]
 #Xtrue = ellipse_im(192, ny=256, oversample=2) # too small
 nx,ny = size(Xtrue)
 jim(Xtrue, "true image")
-prompt()
+#prompt()
 
 # +
 #savefig("xtrue.pdf")
@@ -67,14 +67,14 @@ plot(p1,p2)
 
 # ### Prepare to reconstruct
 # Creating a system matrix (encoding matrix) and an initial image  
-# The system matrix is a `LinearMap` object, akin to a `fatrix` in Matlab MIRT.
+# The system matrix is a `LinearMapAA` object, akin to a `fatrix` in Matlab MIRT.
 
 # system model
 F = LinearMapAA(
     x -> fft(reshape(x,M,N))[samp],
     y -> (M*N)*vec(ifft(embed(y,samp))),
     (sum(samp), M*N),
-	T = Complex{Float32},
+    T = Complex{Float32},
 );
 
 # initial image based on zero-filled reconstruction
@@ -82,7 +82,7 @@ nrmse = (x) -> norm(x[:] - Xtrue[:]) / norm(Xtrue[:])
 X0 = reshape(1/(M*N) * (F' * y), M, N)
 @show nrmse(X0)
 jim(X0, "|X0|: initial image")
-prompt()
+#prompt()
 
 # ### Case 1: Edge-preserving regularization
 #
@@ -92,7 +92,7 @@ prompt()
 # $
 # where $\psi$ is the Fair potential function
 # and $T$ is first-order finite differences in 2D,
-# again implemented as a `LinearMap` object.
+# again implemented as a `LinearMapAA` object.
 
 # Cost function for edge-preserving regularization
 A = F
@@ -112,7 +112,7 @@ Xcg = reshape(xcg, M, N)
 @show nrmse(Xcg)
 
 jim(Xcg, "CG: edge-preserving regularization")
-prompt()
+#prompt()
 
 # +
 #savefig("xcg.pdf")
@@ -125,7 +125,7 @@ Xogm = reshape(xogm, M, N)
 @show nrmse(Xogm)
 
 jim(Xogm, "OGM recon with edge-preserving regularization")
-prompt()
+#prompt()
 
 p1 = jim(Xtrue, "true")
 p2 = jim(X0, "X0: initial")
@@ -135,17 +135,17 @@ p6 = jim(Xcg - Xtrue, "Xcg error")
 plot(p1, p2, p3, p1, p5, p6)
 #plot(p1, p2, p3, layout=(1,3))
 #plot(p5, p6)
-prompt()
+#prompt()
 
 # POGM - suboptimal in smooth case
 if false
-fun_pogm = (iter,xk,yk,rs) -> (cost(xk), nrmse(xk), rs)
-f_grad = (x) -> A'*(A*x - y) + reg * (T' * dpot.(T * x, delta))
-L_f = N*M + 8*reg
-x_pogm, out_pogm = pogm_restart(X0[:], cost, f_grad, L_f;
-    mom=:pogm, niter=niter, fun=fun_pogm)
-Xpogm = reshape(x_pogm, M, N)
-@show nrmse(Xpogm)
+    fun_pogm = (iter,xk,yk,rs) -> (cost(xk), nrmse(xk), rs)
+    f_grad = (x) -> A'*(A*x - y) + reg * (T' * dpot.(T * x, delta))
+    L_f = N*M + 8*reg
+    x_pogm, out_pogm = pogm_restart(X0[:], cost, f_grad, L_f;
+        mom=:pogm, niter=niter, fun=fun_pogm)
+    Xpogm = reshape(x_pogm, M, N)
+    @show nrmse(Xpogm)
 end
 
 # +
@@ -159,7 +159,7 @@ cost_min = min(minimum(cost_cg), minimum(cost_ogm))
 plot(xlabel="iteration k", ylabel="Relative Cost")
 scatter!(0:niter, cost_ogm .- cost_min, markershape=:utriangle, label="Cost OGM")
 scatter!(0:niter, cost_cg  .- cost_min, label="Cost CG")
-prompt()
+#prompt()
 
 # +
 #savefig("cost_ogm_cg.pdf")
@@ -173,7 +173,7 @@ plot(xlabel="iteration k", ylabel="NRMSE")
 scatter!(0:niter, nrmse_ogm, markershape=:utriangle, label="NRMSE OGM")
 scatter!(0:niter, nrmse_cg, label="NRMSE CG")
 #scatter!(0:niter, nrmse_pogm, label="NRMSE POGM")
-prompt()
+#prompt()
 
 # +
 #savefig("nrmse_ogm_cg.pdf")
@@ -193,7 +193,7 @@ prompt()
 # $
 # where
 # and $W$ is an orthogonal discrete (Haar) wavelet transform,
-# again implemented as a `LinearMap` object.
+# again implemented as a `LinearMapAA` object.
 # Because $W$ is unitary,
 # we make the change of variables
 # $z = W x$
@@ -201,9 +201,9 @@ prompt()
 # and then let $x = W' z$
 # at the end.
 
-W, scales, mfun = Aodwt((M,N)) # Orthogonal discrete wavelet transform (LinearMap)
+W, scales, mfun = Aodwt((M,N)) # Orthogonal discrete wavelet transform (LinearMapAA)
 jim(mfun(W,Xtrue) .* (scales .> 0), "wavelet detail coefficients")
-prompt()
+#prompt()
 
 # Cost function for edge-preserving regularization
 Az = F * W'
@@ -252,7 +252,7 @@ Xpogm = reshape(W'*z_pogm, M, N)
 
 jim(Xfista, "FISTA/FPGM")
 jim(Xpogm, "POGM with ODWT")
-prompt()
+#prompt()
 
 # +
 #savefig("xpogm_odwt.pdf")
@@ -267,7 +267,7 @@ plot(xlabel="iteration k", ylabel="Relative cost")
 scatter!(0:niter, cost_ista  .- cost_min, label="Cost ISTA")
 scatter!(0:niter, cost_fista .- cost_min, markershape=:square, label="Cost FISTA")
 scatter!(0:niter, cost_pogm  .- cost_min, markershape=:utriangle, label="Cost POGM")
-prompt()
+#prompt()
 
 # +
 #savefig("cost_pogm_odwt.pdf")
@@ -281,7 +281,7 @@ plot(xlabel="iteration k", ylabel="NRMSE", ylim=[0.01,0.08])
 scatter!(0:niter, nrmse_ista, label="NRMSE ISTA")
 scatter!(0:niter, nrmse_fista, markershape=:square, label="NRMSE FISTA")
 scatter!(0:niter, nrmse_pogm, markershape=:utriangle, label="NRMSE POGM")
-prompt()
+#prompt()
 
 # +
 #savefig("nrmse_pogm_odwt.pdf")
@@ -295,4 +295,4 @@ p6 = jim(Xpogm - Xtrue, "Xpogm error")
 plot(p1, p2, p3, p1, p5, p6)
 #plot(p1, p2, p3, layout=(1,3))
 #plot(p5, p6)
-prompt()
+#prompt()

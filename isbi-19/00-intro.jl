@@ -28,9 +28,12 @@
 # ### Test your installation
 #
 # The next cell loads the packages needed for this initial test.
-# It might take a little bit of time to run the first time you try it because Julia is essentially a compiled language under the hood, even though it feels like an interactive language to the user, so it will be compiling things behind the scenes.
+# It might take a little bit of time to run the first time you try it
+# because Julia is essentially a compiled language under the hood,
+# even though it feels like an interactive language to the user,
+# so it will be compiling things behind the scenes.
 
-# load all packages needed for this demo 
+# Load all packages needed for this demo
 using MIRT: ellipse_im, jim # https://github.com/JeffFessler/MIRT.jl
 using FFTW: fft
 
