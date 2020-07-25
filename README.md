@@ -1,4 +1,6 @@
-# mirt-demo at https://github.com/JeffFessler/mirt-demo
+# mirt-demo
+
+ https://github.com/JeffFessler/mirt-demo
 
 Collection of
 Jupyter notebooks that demonstrate the image reconstruction capabilities
@@ -23,10 +25,23 @@ by clicking on the binder badges below:
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JeffFessler/mirt-demo/master?filepath=mri%2Fmri-sim-2d%2Bt.ipynb)
 
 You can also view the notebook code directly:
-* [demo/](https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/)
+* [isbi-19 demos](https://github.com/JeffFessler/mirt-demo/blob/master/isbi-19/)
+* [other MRI demos](https://github.com/JeffFessler/mirt-demo/blob/master/mri/)
 
 Here is an example of the kind of image produced by one of the demos
 ![phantom-image](/figure/isbi-19-recon1.png?raw=true "phantom image")
+
+
+### Notes
+
+The `Makefile` uses some very useful command-line tools,
+namely
+[jupytext](https://github.com/mwouts/jupytext)
+[nbconvert](https://nbconvert.readthedocs.io)
+to automatically
+create the Jupyter notebooks
+and a corresponding html version
+from the Julia source code.
 
 This software was developed at the University of Michigan 
 by 
