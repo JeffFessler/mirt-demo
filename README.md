@@ -37,6 +37,7 @@ Here is an example of the kind of image produced by one of the demos
 The `Makefile` uses some very useful command-line tools,
 namely
 [jupytext](https://github.com/mwouts/jupytext)
+and
 [nbconvert](https://nbconvert.readthedocs.io)
 to automatically
 create the Jupyter notebooks
