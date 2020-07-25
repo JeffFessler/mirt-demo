@@ -21,10 +21,10 @@
 
 using MIRT: jim, prompt
 using MIRT: image_geom, ellipse_im_params, ellipse_im
-using MIRT: nufft_init, diff_map, ncg
+using MIRT: nufft_init, diffl_map, ncg
 using MIRT: ir_mri_sensemap_sim, ir_mri_kspace_ga_radial
 using Plots: gui, plot, scatter, default; default(markerstrokecolor=:auto)
-using LinearAlgebra: norm, Diagonal
+using LinearAlgebra: norm, dot, Diagonal
 using LinearMapsAA
 using Random: seed!
 jim(:abswarn, false); # suppress warnings about display of |complex| images
@@ -72,16 +72,18 @@ if !@isdefined(kspace)
 	kspace[:,:,2] ./= ig.fovs[2]
 	kspace = reshape(kspace, Nro, nspf, nt, 2)
 
-	if true # plot sampling
+	if true # plot sampling (in units of cycles/pixel)
 		ps = Array{Any}(undef, nt)
 		for it=1:nt
-			ps[it] = scatter(kspace[:,:,it,1], kspace[:,:,it,2], aspect_ratio=1, label="")
+			ps[it] = scatter(kspace[:,:,it,1] * ig.fovs[1], kspace[:,:,it,2] * ig.fovs[2],
+				xtick=(-1:1)*0.5, ytick=(-1:1)*0.5, xlim=[-1,1]*0.52, ylim=[-1,1]*0.52,
+				aspect_ratio=1, label="", markersize=1)
 			plot(ps[it])
 			gui()
 		end
 		plot(ps..., layout=(2,4))
+	#	prompt()
 	end
-#	prompt()
 end
 # -
 
@@ -90,7 +92,7 @@ end
 # make sensitivity maps, normalized so SSoS = 1
 if !@isdefined(smap)
 	ncoil = 2
-	(smap,_) = ir_mri_sensemap_sim(dims=N, ncoil=ncoil, orbit_start=90)
+	smap = ir_mri_sensemap_sim(dims=N, ncoil=ncoil, orbit_start=[90])
 	p1 = jim(smap, "ncoil=$ncoil sensitivity maps raw")
 
 	ssos = sqrt.(sum(abs.(smap).^2, dims=ndims(smap))) # SSoS
@@ -122,7 +124,8 @@ if !@isdefined(A)
 
 	# block diagonal system matrix, with one NUFFT per frame
 	S = [Diagonal(selectdim(smap, ndims(smap), ic)[:]) for ic=1:ncoil]
-	AS1 = A1 -> vcat([A1 * LinearMapAA(s) for s in S]...) # [A1*S1; ... ; A1*Sncoil]
+	SO = s -> LinearMapAA(s ; idim=N, odim=N) # LinearMapAO
+	AS1 = A1 -> vcat([A1 * SO(s) for s in S]...) # [A1*S1; ... ; A1*Sncoil]
 
 	# output is essentially [nt Ncoil nspf Nro] (which is possibly unusual)
 	# input is [N... nt]
@@ -134,7 +137,7 @@ end
 #+
 # simulate k-space data via an inverse crime
 if !@isdefined(y)
-	ytrue = A * xtrue[:]
+	ytrue = A * xtrue
 
 	snr2sigma = (db, yb) -> # compute noise sigma from SNR (no sqrt(2) needed)
 		10^(-db/20) * norm(yb) / sqrt(length(yb))
@@ -151,10 +154,9 @@ end
 if !@isdefined(x0)
 	# todo: should use density compensation, perhaps via
 	# https://github.com/JuliaGeometry/VoronoiDelaunay.jl
-	x0 = reshape(A' * y, N..., nt) # zero-filled recon
-
-	tmp = A * x0[:]
-	x0 = (tmp'y / norm(tmp)^2) * x0 # scale sensibly
+	x0 = A' * y # zero-filled recon (for each frame)
+	tmp = A * x0 # Nkspace × Ncoil × Nframe
+	x0 = (dot(tmp,y) / norm(tmp)^2) * x0 # scale sensibly
 	jim(x0, "initial image", yflip=ig.dy < 0)
 end
 #prompt()
@@ -163,12 +165,8 @@ end
 # +
 # temporal finite differences
 if !@isdefined(Dt)
-	N3i = (N..., nt) # (nx ny nt)
-	N3o = (N..., nt-1) # (nx ny nt-1)
-	Dt = diff_map(N3i, dims=length(N)+1) # T=eltype(A)) # todo
-
-	tmp = reshape(Dt * xtrue[:], N3o)
-	tmp = reshape(Dt' * tmp[:], N3i)
+	Dt = diffl_map((N..., nt), length(N)+1 ; T=eltype(A))
+	tmp = Dt' * (Dt * xtrue)
 	jim(tmp, "time diff", yflip=ig.dy < 0)
 end
 #prompt()
@@ -188,9 +186,8 @@ if !@isdefined(xh)
 	fun = (x,iter) -> cost(x)
 	gradf = [v -> v - y, u -> reg * dpot.(u)]
 	curvf = [v -> Float32(1), u -> reg]
-	B = [A,Dt]
-	(xh, out) = ncg(B, gradf, curvf, x0[:]; niter=niter, fun=fun)
-	xh = reshape(xh, N3i)
+	B = [A, Dt]
+	(xh, out) = ncg(B, gradf, curvf, x0 ; niter=niter, fun=fun)
 	costs = [out[i+1][1] for i=0:niter]
 end
 
