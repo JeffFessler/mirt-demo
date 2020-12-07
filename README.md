@@ -34,7 +34,7 @@ Here is an example of the kind of image produced by one of the demos
 
 Some of the notebooks reproduce figures in this survey paper:
 * J A Fessler: "Optimization methods for MR image reconstruction,"
-[IEEE Sig. Proc. Mag., 37(1):33-40, Jan. 2020.](http://doi.org/10.1109/MSP.2019.2943645")
+[IEEE Sig. Proc. Mag., 37(1):33-40, Jan. 2020.](http://doi.org/10.1109/MSP.2019.2943645)
 
 
 ### Notes
