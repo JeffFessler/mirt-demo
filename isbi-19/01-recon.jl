@@ -28,7 +28,8 @@
 
 # load all packages needed for this demo 
 # https://github.com/JeffFessler/MIRT.jl:
-using MIRT: ellipse_im, jim, prompt, embed, Afft, diffl_map, Aodwt
+using MIRT: ellipse_im, prompt, embed, Afft, diffl_map, Aodwt
+using MIRTjim: jim
 using MIRT: ncg, ogm_ls, pogm_restart
 using LinearAlgebra
 using Plots; default(markerstrokecolor=:auto)
