@@ -6,7 +6,12 @@ Collection of
 Jupyter notebooks that demonstrate the image reconstruction capabilities
 of
 [MIRT.jl](https://github.com/JeffFessler/MIRT.jl),
-the Julia version of the Michigan Image Reconstruction Toolbox.
+the Julia language version of the Michigan Image Reconstruction Toolbox.
+
+These demos remain here for historical completeness,
+but are no longer maintained.
+Please see the updated examples at
+[https://github.com/JuliaImageRecon/Examples](https://github.com/JuliaImageRecon/Examples).
 
 You can test drive any of these Jupyter notebooks
 in a browser
